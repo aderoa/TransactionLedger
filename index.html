@@ -68,6 +68,7 @@ td.arrowcol{width:18px;color:var(--faint);text-align:center}
 .flag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--amber);margin-left:6px}
 .asset-note{color:#6f6a62;font-style:italic}
 .rights{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.04em;border:1px solid var(--line);border-radius:4px;padding:1px 4px;margin-left:4px}
+.logtag{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--amber);border:1px solid var(--amber);border-radius:4px;padding:1px 4px;text-transform:uppercase;letter-spacing:.04em;opacity:.8}
 .tog{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--muted);white-space:nowrap;padding:8px 0;cursor:pointer}
 .tog input{accent-color:var(--amber);cursor:pointer}
 .dgrp{display:flex;gap:4px}
@@ -158,7 +159,7 @@ const COLS = [
   {k:'type',label:'Type',cls:'type'},{k:'player_name',label:'Player',cls:'player'},
   {k:'from_team_name',label:'From',cls:'team'},{k:'to_team_name',label:'To',cls:'team'}
 ];
-let DATA=[], ASSETS={}, hasAssets=false, ROWS=[];
+let DATA=[], ASSETS={}, hasAssets=false, ROWS=[], LOG=[];
 const NAME2FID={}; FLIST.forEach(f=>NAME2FID[f[1].toLowerCase()]=f[0]);
 let st={q:'',type:'',season:'',fr:'',month:'',day:'',year:'',sortKey:'date',sortDir:'desc',page:1,size:100,expanded:new Set(),untangle:true};
 let MAP_BYID={}, MAP_BYNAME={};
@@ -180,18 +181,22 @@ function buildRows(){
       ROWS.push(Object.assign({uid:r.transaction_id}, r));
     }
   }
+  LOG.forEach((r,i)=>ROWS.push(Object.assign({uid:r.transaction_id||('LOG#'+i), _log:true}, r)));
 }
 
 function parseFiles(files){
   for(const f of files){
-    const isName=/name/i.test(f.name), isAssets=!isName&&/asset/i.test(f.name);
+    const isName=/name[_-]?map/i.test(f.name), isLog=!isName&&/manual|tx[_-]?log|transaction[_-]?log/i.test(f.name),
+          isAssets=!isName&&!isLog&&/asset/i.test(f.name);
     Papa.parse(f,{header:true,skipEmptyLines:true,worker:false,complete:r=>{
       if(isName){ loadNameMap(r.data); }
+      else if(isLog){ loadLog(r.data); }
       else if(isAssets){ indexAssets(r.data); }
       else { DATA=r.data; applyNames(); boot(); }
     }});
   }
 }
+function loadLog(rows){ LOG=rows||[]; applyNames(); if(DATA.length){ buildRows(); render(); } }
 function setNameMap(rows){
   MAP_BYID={}; MAP_BYNAME={};
   if(!rows.length) return;
@@ -215,6 +220,7 @@ function applyNames(){
     return null;
   };
   for(const r of DATA){ const n=sub(r); if(n) r.player_name=n; }
+  for(const r of LOG){ const n=sub(r); if(n) r.player_name=n; }
   for(const k in ASSETS){ for(const a of ASSETS[k]){ const n=sub(a); if(n) a.player_name=n; } }
 }
 function loadNameMap(rows){ setNameMap(rows); applyNames(); if(DATA.length){ buildRows(); render(); } }
@@ -228,9 +234,11 @@ function tryAutoload(){
   Promise.allSettled([
     fetch('transactions_all.csv').then(r=>r.ok?r.text():Promise.reject()),
     fetch('transaction_assets_all.csv').then(r=>r.ok?r.text():Promise.reject()),
-    fetch('name_map.csv').then(r=>r.ok?r.text():Promise.reject())
-  ]).then(([tx,as,nm])=>{
+    fetch('name_map.csv').then(r=>r.ok?r.text():Promise.reject()),
+    fetch('manual_transactions.csv').then(r=>r.ok?r.text():Promise.reject())
+  ]).then(([tx,as,nm,lg])=>{
     if(nm.status==='fulfilled') setNameMap(Papa.parse(nm.value,{header:true,skipEmptyLines:true}).data);
+    if(lg.status==='fulfilled') LOG=Papa.parse(lg.value,{header:true,skipEmptyLines:true}).data||[];
     if(as.status==='fulfilled') indexAssets(Papa.parse(as.value,{header:true,skipEmptyLines:true}).data);
     if(tx.status==='fulfilled'){ DATA=Papa.parse(tx.value,{header:true,skipEmptyLines:true}).data; applyNames(); boot(); }
   });
@@ -239,7 +247,7 @@ function tryAutoload(){
 function boot(){
   $('#empty').classList.add('hidden'); $('#app').classList.remove('hidden');
   buildHead(); buildRows(); buildFilters();
-  $('#tick').textContent = DATA.length.toLocaleString()+' transactions'+(hasAssets?' · assets linked':'');
+  $('#tick').textContent = DATA.length.toLocaleString()+' transactions'+(hasAssets?' · assets linked':'')+(LOG.length?' · '+LOG.length+' logged':'');
   render();
 }
 function buildHead(){
@@ -344,7 +352,7 @@ function render(){
 }
 function rowHTML(r){
   const open=st.expanded.has(r.uid);
-  const pill=`<span class="type-pill t-${esc(r.type)}">${esc(r.type)}</span>`;
+  const pill=`<span class="type-pill t-${esc(r.type)}">${esc(r.type)}</span>`+(r._log?' <span class="logtag">log</span>':'');
   const isPlayerAsset = r.asset_type==='player'||r.asset_type==='draft_rights';
   let player;
   if(r._u && !isPlayerAsset) player=`<span class="asset-note">${esc(r.player_name)}</span>`;
