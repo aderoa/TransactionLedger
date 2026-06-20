@@ -1,0 +1,2 @@
+transaction_id,date,season,type,multiyear,player_id,player_name,from_team_id,from_team_name,to_team_id,to_team_name,raw_text,source_url
+LOG-20260618-001,2026-06-18,2025-26,qualifying_offer,,,Mark Williams,,,,Phoenix Suns,"The Phoenix Suns tendered a Qualifying Offer of $9,615,393 (starter criteria met) to make Mark Williams a Restricted FA.",manual
