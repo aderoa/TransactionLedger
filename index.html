@@ -66,6 +66,13 @@ td.arrowcol{width:18px;color:var(--faint);text-align:center}
 .t-waive,.t-ten_day_end,.t-two_way_end{color:var(--waive)} .t-free_agent{color:var(--fa)}
 .t-gleague_assign,.t-gleague_recall{color:var(--gleague)}
 .flag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--amber);margin-left:6px}
+.asset-note{color:#6f6a62;font-style:italic}
+.rights{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.04em;border:1px solid var(--line);border-radius:4px;padding:1px 4px;margin-left:4px}
+.tog{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--muted);white-space:nowrap;padding:8px 0;cursor:pointer}
+.tog input{accent-color:var(--amber);cursor:pointer}
+.dgrp{display:flex;gap:4px}
+.dgrp select{min-width:0}
+#fmonth{flex:0 0 64px}#fday{flex:0 0 52px}#fyear{flex:0 0 62px}
 
 /* detail row */
 tr.detail td{background:var(--card);border-bottom:1px solid var(--line)}
@@ -114,6 +121,9 @@ tr.detail td{background:var(--card);border-bottom:1px solid var(--line)}
     <div class="field fxd"><label for="ftype">Type</label><select id="ftype"></select></div>
     <div class="field fxd"><label for="fseason">Season</label><select id="fseason"></select></div>
     <div class="field fxd"><label for="ffr">Franchise <span style="color:var(--amber)">(all eras)</span></label><select id="ffr"></select></div>
+    <div class="field fxd"><label>Date <span style="color:var(--faint)">(mo / day / yr)</span></label>
+      <div class="dgrp"><select id="fmonth"></select><select id="fday"></select><select id="fyear"></select></div></div>
+    <div class="field fxd"><label>Trades</label><label class="tog"><input type="checkbox" id="untangle" checked> untangle</label></div>
     <div class="field fxd"><label>&nbsp;</label><button class="ghost" id="reset">Reset</button></div>
   </div>
   <div class="tally" id="tally"></div>
@@ -135,6 +145,7 @@ tr.detail td{background:var(--card);border-bottom:1px solid var(--line)}
   <h2>Drop your ledger in</h2>
   <p>Drag <b>transactions_all.csv</b> here, or pick it below.</p>
   <p>Optionally add <b>transaction_assets_all.csv</b> to expand grouped trades into their pieces.</p>
+  <p class="opt">…and <b>name_map.csv</b> to show HoopsHype name spellings.</p>
   <label>Choose files<input id="file" type="file" accept=".csv" multiple class="hidden"></label>
   <div class="opt">Hosting this on GitHub Pages? Put the CSVs in the same folder and it loads them automatically.</div>
 </div>
@@ -147,39 +158,87 @@ const COLS = [
   {k:'type',label:'Type',cls:'type'},{k:'player_name',label:'Player',cls:'player'},
   {k:'from_team_name',label:'From',cls:'team'},{k:'to_team_name',label:'To',cls:'team'}
 ];
-let DATA=[], ASSETS={}, hasAssets=false;
-let st={q:'',type:'',season:'',fr:'',sortKey:'date',sortDir:'desc',page:1,size:100,expanded:new Set()};
+let DATA=[], ASSETS={}, hasAssets=false, ROWS=[];
+const NAME2FID={}; FLIST.forEach(f=>NAME2FID[f[1].toLowerCase()]=f[0]);
+let st={q:'',type:'',season:'',fr:'',month:'',day:'',year:'',sortKey:'date',sortDir:'desc',page:1,size:100,expanded:new Set(),untangle:true};
+let MAP_BYID={}, MAP_BYNAME={};
 
 const $=s=>document.querySelector(s);
 const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const frOf=id=>FMAP[id]?FMAP[id][0]:'';
 
+function buildRows(){
+  ROWS=[];
+  for(const r of DATA){
+    if(st.untangle && r.type==='trade_complex' && ASSETS[r.transaction_id] && ASSETS[r.transaction_id].length){
+      ASSETS[r.transaction_id].forEach((a,i)=>ROWS.push({
+        uid:r.transaction_id+'#'+i, transaction_id:r.transaction_id, date:r.date, season:r.season,
+        type:'trade', asset_type:a.asset_type, player_name:a.player_name||a.notes||a.asset_type,
+        from_team_name:a.from_team_name, to_team_name:a.to_team_name,
+        from_team_id:a.from_team_id, to_team_id:a.to_team_id, raw_text:r.raw_text, _u:true }));
+    } else {
+      ROWS.push(Object.assign({uid:r.transaction_id}, r));
+    }
+  }
+}
+
 function parseFiles(files){
   for(const f of files){
-    const isAssets=/asset/i.test(f.name);
+    const isName=/name/i.test(f.name), isAssets=!isName&&/asset/i.test(f.name);
     Papa.parse(f,{header:true,skipEmptyLines:true,worker:false,complete:r=>{
-      if(isAssets){ indexAssets(r.data); } else { DATA=r.data; boot(); }
+      if(isName){ loadNameMap(r.data); }
+      else if(isAssets){ indexAssets(r.data); }
+      else { DATA=r.data; applyNames(); boot(); }
     }});
   }
 }
+function setNameMap(rows){
+  MAP_BYID={}; MAP_BYNAME={};
+  if(!rows.length) return;
+  const cols=Object.keys(rows[0]);
+  const idc=cols.find(c=>/^(realgm_)?player_id$/i.test(c));
+  const rgc=cols.find(c=>/^(realgm_name|rg_?name|rg_?code|rg)$/i.test(c));
+  const hc=cols.find(c=>/^(hh_name|display_name|name)$/i.test(c)) || cols.find(c=>c!==idc&&c!==rgc);
+  if(!hc) return;
+  for(const r of rows){
+    const hh=((r[hc]||'')+'').trim(); if(!hh) continue;
+    if(idc&&r[idc]) MAP_BYID[(r[idc]+'').trim()]=hh;
+    if(rgc&&r[rgc]) MAP_BYNAME[(r[rgc]+'').trim().toLowerCase()]=hh;
+  }
+}
+function applyNames(){
+  const bi=Object.keys(MAP_BYID).length, bn=Object.keys(MAP_BYNAME).length;
+  if(!bi&&!bn) return;
+  const sub=r=>{
+    if(bi&&r.player_id&&MAP_BYID[r.player_id]) return MAP_BYID[r.player_id];
+    if(bn&&r.player_name){ const h=MAP_BYNAME[r.player_name.toLowerCase()]; if(h) return h; }
+    return null;
+  };
+  for(const r of DATA){ const n=sub(r); if(n) r.player_name=n; }
+  for(const k in ASSETS){ for(const a of ASSETS[k]){ const n=sub(a); if(n) a.player_name=n; } }
+}
+function loadNameMap(rows){ setNameMap(rows); applyNames(); if(DATA.length){ buildRows(); render(); } }
 function indexAssets(rows){
   ASSETS={}; hasAssets=true;
   for(const a of rows){ (ASSETS[a.transaction_id]=ASSETS[a.transaction_id]||[]).push(a); }
-  if(DATA.length) render();
+  applyNames();
+  if(DATA.length){ buildRows(); render(); }
 }
 function tryAutoload(){
   Promise.allSettled([
     fetch('transactions_all.csv').then(r=>r.ok?r.text():Promise.reject()),
-    fetch('transaction_assets_all.csv').then(r=>r.ok?r.text():Promise.reject())
-  ]).then(([tx,as])=>{
+    fetch('transaction_assets_all.csv').then(r=>r.ok?r.text():Promise.reject()),
+    fetch('name_map.csv').then(r=>r.ok?r.text():Promise.reject())
+  ]).then(([tx,as,nm])=>{
+    if(nm.status==='fulfilled') setNameMap(Papa.parse(nm.value,{header:true,skipEmptyLines:true}).data);
     if(as.status==='fulfilled') indexAssets(Papa.parse(as.value,{header:true,skipEmptyLines:true}).data);
-    if(tx.status==='fulfilled'){ DATA=Papa.parse(tx.value,{header:true,skipEmptyLines:true}).data; boot(); }
+    if(tx.status==='fulfilled'){ DATA=Papa.parse(tx.value,{header:true,skipEmptyLines:true}).data; applyNames(); boot(); }
   });
 }
 
 function boot(){
   $('#empty').classList.add('hidden'); $('#app').classList.remove('hidden');
-  buildHead(); buildFilters();
+  buildHead(); buildRows(); buildFilters();
   $('#tick').textContent = DATA.length.toLocaleString()+' transactions'+(hasAssets?' · assets linked':'');
   render();
 }
@@ -192,18 +251,32 @@ function buildHead(){
     st.page=1; render();
   });
 }
+function populateTypeFilter(){
+  const types=[...new Set(ROWS.map(r=>r.type))].sort();
+  $('#ftype').innerHTML='<option value="">All types</option>'+types.map(t=>`<option value="${t}"${st.type===t?' selected':''}>${t}</option>`).join('');
+}
 function buildFilters(){
-  const types=[...new Set(DATA.map(r=>r.type))].sort();
-  $('#ftype').innerHTML='<option value="">All types</option>'+types.map(t=>`<option value="${t}">${t}</option>`).join('');
+  populateTypeFilter();
   const seasons=[...new Set(DATA.map(r=>r.season))].filter(Boolean).sort().reverse();
   $('#fseason').innerHTML='<option value="">All seasons</option>'+seasons.map(s=>`<option value="${s}">${s}</option>`).join('');
   $('#ffr').innerHTML='<option value="">All franchises</option>'+FLIST.map(f=>`<option value="${f[0]}">${f[1]}${f[2]==='defunct'?' †':''}</option>`).join('');
+  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  $('#fmonth').innerHTML='<option value="">Mo</option>'+MONTHS.map((m,i)=>`<option value="${String(i+1).padStart(2,'0')}">${m}</option>`).join('');
+  $('#fday').innerHTML='<option value="">Day</option>'+Array.from({length:31},(_,i)=>`<option value="${String(i+1).padStart(2,'0')}">${i+1}</option>`).join('');
+  const years=[...new Set(DATA.map(r=>(r.date||'').slice(0,4)).filter(Boolean))].sort().reverse();
+  $('#fyear').innerHTML='<option value="">Yr</option>'+years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  $('#untangle').checked=st.untangle; $('#untangle').disabled=!hasAssets;
   $('#q').oninput=deb(e=>{st.q=e.target.value.toLowerCase();st.page=1;render();},180);
   $('#ftype').onchange=e=>{st.type=e.target.value;st.page=1;render();};
   $('#fseason').onchange=e=>{st.season=e.target.value;st.page=1;render();};
   $('#ffr').onchange=e=>{st.fr=e.target.value;st.page=1;render();};
-  $('#reset').onclick=()=>{st.q=st.type=st.season=st.fr='';st.page=1;
-    $('#q').value='';$('#ftype').value='';$('#fseason').value='';$('#ffr').value='';render();};
+  $('#fmonth').onchange=e=>{st.month=e.target.value;st.page=1;render();};
+  $('#fday').onchange=e=>{st.day=e.target.value;st.page=1;render();};
+  $('#fyear').onchange=e=>{st.year=e.target.value;st.page=1;render();};
+  $('#untangle').onchange=e=>{st.untangle=e.target.checked;buildRows();populateTypeFilter();st.page=1;render();};
+  $('#reset').onclick=()=>{st.q=st.type=st.season=st.fr=st.month=st.day=st.year='';st.page=1;
+    $('#q').value='';$('#ftype').value='';$('#fseason').value='';$('#ffr').value='';
+    $('#fmonth').value='';$('#fday').value='';$('#fyear').value='';render();};
   $('#first').onclick=()=>{st.page=1;render();};
   $('#prev').onclick=()=>{st.page=Math.max(1,st.page-1);render();};
   $('#next').onclick=()=>{st.page=st.page+1;render();};
@@ -212,13 +285,24 @@ function buildFilters(){
 }
 const deb=(fn,ms)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};};
 
+function frHit(r,fr){
+  return frOf(r.from_team_id)===fr || frOf(r.to_team_id)===fr ||
+         NAME2FID[(r.from_team_name||'').toLowerCase()]===fr || NAME2FID[(r.to_team_name||'').toLowerCase()]===fr;
+}
 function filtered(){
-  return DATA.filter(r=>{
+  return ROWS.filter(r=>{
     if(st.type && r.type!==st.type) return false;
     if(st.season && r.season!==st.season) return false;
-    if(st.fr && frOf(r.from_team_id)!==st.fr && frOf(r.to_team_id)!==st.fr) return false;
+    if(st.fr && !frHit(r,st.fr)) return false;
+    if(st.year||st.month||st.day){
+      const d=r.date||'';                       // YYYY-MM-DD
+      if(st.year && d.slice(0,4)!==st.year) return false;
+      if(st.month && d.slice(5,7)!==st.month) return false;
+      if(st.day && d.slice(8,10)!==st.day) return false;
+    }
     if(st.q){
-      const hay=(r.player_name+' '+r.from_team_name+' '+r.to_team_name+' '+(r.raw_text||'')).toLowerCase();
+      const hay = r._u ? (r.player_name+' '+r.from_team_name+' '+r.to_team_name).toLowerCase()
+                       : (r.player_name+' '+r.from_team_name+' '+r.to_team_name+' '+(r.raw_text||'')).toLowerCase();
       if(!hay.includes(st.q)) return false;
     }
     return true;
@@ -259,12 +343,16 @@ function render(){
   $('#next').disabled=$('#last').disabled=st.page>=pages;
 }
 function rowHTML(r){
-  const id=r.transaction_id, open=st.expanded.has(id);
+  const open=st.expanded.has(r.uid);
   const pill=`<span class="type-pill t-${esc(r.type)}">${esc(r.type)}</span>`;
-  const flag=(hasAssets&&ASSETS[id])?`<span class="flag">+${ASSETS[id].length}</span>`:'';
-  let h=`<tr class="row" data-id="${esc(id)}">
+  const isPlayerAsset = r.asset_type==='player'||r.asset_type==='draft_rights';
+  let player;
+  if(r._u && !isPlayerAsset) player=`<span class="asset-note">${esc(r.player_name)}</span>`;
+  else player=(esc(r.player_name)||'<span style=color:#aaa>—</span>')+(r.asset_type==='draft_rights'?' <span class="rights">draft rights</span>':'');
+  const flag=(!r._u && hasAssets && ASSETS[r.transaction_id])?`<span class="flag">+${ASSETS[r.transaction_id].length}</span>`:'';
+  let h=`<tr class="row" data-id="${esc(r.uid)}">
     <td class="date">${esc(r.date)||'—'}</td><td class="season">${esc(r.season)}</td>
-    <td class="type">${pill}</td><td class="player">${esc(r.player_name)||'<span style=color:#aaa>—</span>'}</td>
+    <td class="type">${pill}</td><td class="player">${player}</td>
     <td class="team">${esc(r.from_team_name)||'·'}</td><td class="team">${esc(r.to_team_name)||'·'}${flag}</td>
     <td class="arrowcol">${open?'▾':'▸'}</td></tr>`;
   if(open) h+=`<tr class="detail"><td colspan="7"><div class="detail-body">${detailHTML(r)}</div></td></tr>`;
