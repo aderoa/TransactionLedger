@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transaction Ledger — All-Time NBA Moves</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+:root{
+  --paper:#F3F0E9; --card:#FBF9F4; --ink:#181A1B; --muted:#76716A; --faint:#9D978D;
+  --line:#E4DFD4; --line2:#EEEAE0; --bar:#17181A; --bar-ink:#F0EBDF;
+  --amber:#E0902B; --amber-soft:#F5E4C6;
+  --trade:#C2722A; --sign:#3F7d57; --waive:#B0492F; --fa:#3F6F9E; --gleague:#8A8276; --misc:#76716A;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:1.45}
+button,input,select{font-family:inherit;font-size:inherit;color:inherit}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+
+/* scoreboard header bar */
+header{background:var(--bar);color:var(--bar-ink);padding:14px 20px;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;border-bottom:3px solid var(--amber)}
+header h1{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px;letter-spacing:.04em;margin:0;text-transform:uppercase}
+header .tick{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--amber);letter-spacing:.06em}
+header .sub{color:#9b958a;font-size:12px;margin-left:auto;letter-spacing:.02em}
+
+/* controls */
+.controls{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--line);
+  padding:12px 20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.controls .grow{flex:1 1 240px;min-width:180px}
+input[type=search],select{background:var(--card);border:1px solid var(--line);border-radius:7px;padding:8px 11px;width:100%}
+select{cursor:pointer}
+.field{display:flex;flex-direction:column;gap:3px}
+.field label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:600;padding-left:2px}
+.field.fxd{flex:0 0 auto}
+button.ghost{background:none;border:1px solid var(--line);border-radius:7px;padding:8px 12px;cursor:pointer;color:var(--muted)}
+button.ghost:hover{border-color:var(--amber);color:var(--ink)}
+
+/* type tally strip */
+.tally{padding:8px 20px 0;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tally .chip{font-family:'JetBrains Mono',monospace;font-size:11px;border:1px solid var(--line);border-radius:20px;
+  padding:3px 9px;color:var(--muted);background:var(--card);cursor:pointer;white-space:nowrap}
+.tally .chip b{color:var(--ink);font-weight:600}
+.tally .chip.on{border-color:var(--amber);background:var(--amber-soft)}
+
+/* table */
+.wrap{padding:10px 20px 80px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:760px}
+thead th{position:sticky;top:0;background:var(--paper);text-align:left;font-family:'JetBrains Mono',monospace;
+  font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:500;
+  padding:9px 10px;border-bottom:2px solid var(--line);cursor:pointer;user-select:none;white-space:nowrap}
+thead th .ar{color:var(--amber);font-weight:700;margin-left:3px}
+thead th[data-static]{cursor:default}
+tbody td{padding:8px 10px;border-bottom:1px solid var(--line2);vertical-align:top}
+tbody tr.row:hover{background:var(--card);cursor:pointer}
+td.date,td.season,td.pid{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--muted);white-space:nowrap}
+td.player{font-weight:500}
+td.team{color:#3a3a3a}
+td.arrowcol{width:18px;color:var(--faint);text-align:center}
+.type-pill{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;
+  padding:2px 7px;border-radius:5px;white-space:nowrap;border:1px solid currentColor;display:inline-block}
+.t-trade,.t-trade_complex{color:var(--trade)} .t-sign,.t-ten_day_sign,.t-two_way_sign{color:var(--sign)}
+.t-waive,.t-ten_day_end,.t-two_way_end{color:var(--waive)} .t-free_agent{color:var(--fa)}
+.t-gleague_assign,.t-gleague_recall{color:var(--gleague)}
+.flag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--amber);margin-left:6px}
+
+/* detail row */
+tr.detail td{background:var(--card);border-bottom:1px solid var(--line)}
+.detail-body{padding:6px 4px 10px;font-size:13px;color:#3a3a3a}
+.detail-body .raw{font-style:italic;color:#54504a}
+.assets{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
+.assets h4{margin:0 0 6px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.asset{font-family:'JetBrains Mono',monospace;font-size:12px;display:grid;grid-template-columns:120px 1fr;gap:8px;padding:2px 0}
+.asset .k{color:var(--faint);text-transform:uppercase;font-size:10.5px;letter-spacing:.04em;padding-top:1px}
+.asset .mv b{color:var(--trade)}
+
+/* footer pager */
+.pager{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
+  padding:9px 20px;display:flex;gap:10px;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px}
+.pager button{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer}
+.pager button:disabled{opacity:.4;cursor:default}
+.pager .count{color:var(--muted);margin-right:auto}
+.pager input{width:64px;text-align:center;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:5px}
+
+/* dropzone / empty */
+.drop{margin:60px auto;max-width:560px;text-align:center;border:2px dashed var(--line);border-radius:14px;padding:48px 28px;background:var(--card)}
+.drop.over{border-color:var(--amber);background:var(--amber-soft)}
+.drop h2{font-family:'JetBrains Mono',monospace;font-size:16px;margin:0 0 8px}
+.drop p{color:var(--muted);margin:6px 0}
+.drop label{display:inline-block;margin-top:14px;background:var(--bar);color:var(--bar-ink);border-radius:8px;padding:10px 18px;cursor:pointer;font-weight:500}
+.drop .opt{font-size:12px;color:var(--faint);margin-top:18px}
+.hidden{display:none!important}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+@media (max-width:640px){header .sub{width:100%;margin-left:0}.wrap{padding:10px 12px 80px}.controls{padding:10px 12px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Transaction&nbsp;Ledger</h1>
+  <span class="tick" id="tick">— loading —</span>
+  <span class="sub">All-time NBA roster moves · 1946–present · RealGM</span>
+</header>
+
+<div id="app" class="hidden">
+  <div class="controls">
+    <div class="field grow">
+      <label for="q">Search player or team</label>
+      <input id="q" type="search" placeholder="e.g. LeBron James, Lakers, Pau Gasol…" autocomplete="off">
+    </div>
+    <div class="field fxd"><label for="ftype">Type</label><select id="ftype"></select></div>
+    <div class="field fxd"><label for="fseason">Season</label><select id="fseason"></select></div>
+    <div class="field fxd"><label for="ffr">Franchise <span style="color:var(--amber)">(all eras)</span></label><select id="ffr"></select></div>
+    <div class="field fxd"><label>&nbsp;</label><button class="ghost" id="reset">Reset</button></div>
+  </div>
+  <div class="tally" id="tally"></div>
+  <div class="wrap">
+    <table>
+      <thead><tr id="head"></tr></thead>
+      <tbody id="body"></tbody>
+    </table>
+  </div>
+  <div class="pager">
+    <span class="count" id="count"></span>
+    <button id="first">⏮</button><button id="prev">◀</button>
+    <span>page <input id="page" type="number" min="1" value="1"> / <span id="pages">1</span></span>
+    <button id="next">▶</button><button id="last">⏭</button>
+  </div>
+</div>
+
+<div id="empty" class="drop">
+  <h2>Drop your ledger in</h2>
+  <p>Drag <b>transactions_all.csv</b> here, or pick it below.</p>
+  <p>Optionally add <b>transaction_assets_all.csv</b> to expand grouped trades into their pieces.</p>
+  <label>Choose files<input id="file" type="file" accept=".csv" multiple class="hidden"></label>
+  <div class="opt">Hosting this on GitHub Pages? Put the CSVs in the same folder and it loads them automatically.</div>
+</div>
+
+<script>
+const FMAP = {"1":["ATL","Atlanta Hawks"],"45":["ATL","Atlanta Hawks"],"46":["ATL","Atlanta Hawks"],"49":["ATL","Atlanta Hawks"],"2":["BOS","Boston Celtics"],"38":["BKN","Brooklyn Nets"],"18":["BKN","Brooklyn Nets"],"42":["BKN","Brooklyn Nets"],"3":["CHA","Charlotte Hornets"],"4":["CHI","Chicago Bulls"],"5":["CLE","Cleveland Cavaliers"],"6":["DAL","Dallas Mavericks"],"7":["DEN","Denver Nuggets"],"8":["DET","Detroit Pistons"],"53":["DET","Detroit Pistons"],"9":["GSW","Golden State Warriors"],"44":["GSW","Golden State Warriors"],"10":["HOU","Houston Rockets"],"40":["HOU","Houston Rockets"],"11":["IND","Indiana Pacers"],"12":["LAC","Los Angeles Clippers"],"35":["LAC","Los Angeles Clippers"],"36":["LAC","Los Angeles Clippers"],"13":["LAL","Los Angeles Lakers"],"47":["LAL","Los Angeles Lakers"],"14":["MEM","Memphis Grizzlies"],"32":["MEM","Memphis Grizzlies"],"15":["MIA","Miami Heat"],"16":["MIL","Milwaukee Bucks"],"17":["MIN","Minnesota Timberwolves"],"19":["NOP","New Orleans Pelicans"],"31":["NOP","New Orleans Pelicans"],"20":["NYK","New York Knicks"],"33":["OKC","Oklahoma City Thunder"],"27":["OKC","Oklahoma City Thunder"],"21":["ORL","Orlando Magic"],"22":["PHI","Philadelphia 76ers"],"54":["PHI","Philadelphia 76ers"],"23":["PHX","Phoenix Suns"],"24":["POR","Portland Trail Blazers"],"25":["SAC","Sacramento Kings"],"34":["SAC","Sacramento Kings"],"41":["SAC","Sacramento Kings"],"55":["SAC","Sacramento Kings"],"26":["SAS","San Antonio Spurs"],"28":["TOR","Toronto Raptors"],"29":["UTA","Utah Jazz"],"39":["UTA","Utah Jazz"],"30":["WAS","Washington Wizards"],"48":["WAS","Washington Wizards"],"51":["CHI_STAGS","Chicago Stags"],"52":["BAL_BULLETS_BAA","Baltimore Bullets (1947-54)"],"56":["WAS_CAPITOLS","Washington Capitols"],"57":["WATERLOO","Waterloo Hawks"],"58":["TOR_HUSKIES","Toronto Huskies"],"59":["SHEBOYGAN","Sheboygan Red Skins"],"60":["PROVIDENCE","Providence Steamrollers"],"61":["PIT_IRONMEN","Pittsburgh Ironmen"],"62":["IND_JETS","Indianapolis Jets"],"63":["DET_FALCONS","Detroit Falcons"],"64":["DEN_NUGGETS_1950","Denver Nuggets (1949-50)"],"65":["CLE_REBELS","Cleveland Rebels"],"66":["ANDERSON","Anderson Packers"],"67":["STL_BOMBERS","St. Louis Bombers"],"68":["IND_OLYMPIANS","Indianapolis Olympians"]};       // team_id -> [abbrev, current_name]
+const FLIST = [["ATL","Atlanta Hawks","active"],["BOS","Boston Celtics","active"],["BKN","Brooklyn Nets","active"],["CHA","Charlotte Hornets","active"],["CHI","Chicago Bulls","active"],["CLE","Cleveland Cavaliers","active"],["DAL","Dallas Mavericks","active"],["DEN","Denver Nuggets","active"],["DET","Detroit Pistons","active"],["GSW","Golden State Warriors","active"],["HOU","Houston Rockets","active"],["IND","Indiana Pacers","active"],["LAC","Los Angeles Clippers","active"],["LAL","Los Angeles Lakers","active"],["MEM","Memphis Grizzlies","active"],["MIA","Miami Heat","active"],["MIL","Milwaukee Bucks","active"],["MIN","Minnesota Timberwolves","active"],["NOP","New Orleans Pelicans","active"],["NYK","New York Knicks","active"],["OKC","Oklahoma City Thunder","active"],["ORL","Orlando Magic","active"],["PHI","Philadelphia 76ers","active"],["PHX","Phoenix Suns","active"],["POR","Portland Trail Blazers","active"],["SAC","Sacramento Kings","active"],["SAS","San Antonio Spurs","active"],["TOR","Toronto Raptors","active"],["UTA","Utah Jazz","active"],["WAS","Washington Wizards","active"],["ANDERSON","Anderson Packers","defunct"],["BAL_BULLETS_BAA","Baltimore Bullets (1947-54)","defunct"],["CHI_STAGS","Chicago Stags","defunct"],["CLE_REBELS","Cleveland Rebels","defunct"],["DEN_NUGGETS_1950","Denver Nuggets (1949-50)","defunct"],["DET_FALCONS","Detroit Falcons","defunct"],["IND_JETS","Indianapolis Jets","defunct"],["IND_OLYMPIANS","Indianapolis Olympians","defunct"],["PIT_IRONMEN","Pittsburgh Ironmen","defunct"],["PROVIDENCE","Providence Steamrollers","defunct"],["SHEBOYGAN","Sheboygan Red Skins","defunct"],["STL_BOMBERS","St. Louis Bombers","defunct"],["TOR_HUSKIES","Toronto Huskies","defunct"],["WAS_CAPITOLS","Washington Capitols","defunct"],["WATERLOO","Waterloo Hawks","defunct"]];     // [abbrev, current_name, status]
+const COLS = [
+  {k:'date',label:'Date',cls:'date'},{k:'season',label:'Season',cls:'season'},
+  {k:'type',label:'Type',cls:'type'},{k:'player_name',label:'Player',cls:'player'},
+  {k:'from_team_name',label:'From',cls:'team'},{k:'to_team_name',label:'To',cls:'team'}
+];
+let DATA=[], ASSETS={}, hasAssets=false;
+let st={q:'',type:'',season:'',fr:'',sortKey:'date',sortDir:'desc',page:1,size:100,expanded:new Set()};
+
+const $=s=>document.querySelector(s);
+const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const frOf=id=>FMAP[id]?FMAP[id][0]:'';
+
+function parseFiles(files){
+  for(const f of files){
+    const isAssets=/asset/i.test(f.name);
+    Papa.parse(f,{header:true,skipEmptyLines:true,worker:false,complete:r=>{
+      if(isAssets){ indexAssets(r.data); } else { DATA=r.data; boot(); }
+    }});
+  }
+}
+function indexAssets(rows){
+  ASSETS={}; hasAssets=true;
+  for(const a of rows){ (ASSETS[a.transaction_id]=ASSETS[a.transaction_id]||[]).push(a); }
+  if(DATA.length) render();
+}
+function tryAutoload(){
+  Promise.allSettled([
+    fetch('transactions_all.csv').then(r=>r.ok?r.text():Promise.reject()),
+    fetch('transaction_assets_all.csv').then(r=>r.ok?r.text():Promise.reject())
+  ]).then(([tx,as])=>{
+    if(as.status==='fulfilled') indexAssets(Papa.parse(as.value,{header:true,skipEmptyLines:true}).data);
+    if(tx.status==='fulfilled'){ DATA=Papa.parse(tx.value,{header:true,skipEmptyLines:true}).data; boot(); }
+  });
+}
+
+function boot(){
+  $('#empty').classList.add('hidden'); $('#app').classList.remove('hidden');
+  buildHead(); buildFilters();
+  $('#tick').textContent = DATA.length.toLocaleString()+' transactions'+(hasAssets?' · assets linked':'');
+  render();
+}
+function buildHead(){
+  $('#head').innerHTML = COLS.map(c=>`<th data-k="${c.k}">${c.label}<span class="ar" data-ar="${c.k}"></span></th>`).join('')+'<th data-static></th>';
+  $('#head').querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k;
+    if(st.sortKey===k) st.sortDir=st.sortDir==='asc'?'desc':'asc';
+    else {st.sortKey=k; st.sortDir=(k==='date'||k==='season')?'desc':'asc';}
+    st.page=1; render();
+  });
+}
+function buildFilters(){
+  const types=[...new Set(DATA.map(r=>r.type))].sort();
+  $('#ftype').innerHTML='<option value="">All types</option>'+types.map(t=>`<option value="${t}">${t}</option>`).join('');
+  const seasons=[...new Set(DATA.map(r=>r.season))].filter(Boolean).sort().reverse();
+  $('#fseason').innerHTML='<option value="">All seasons</option>'+seasons.map(s=>`<option value="${s}">${s}</option>`).join('');
+  $('#ffr').innerHTML='<option value="">All franchises</option>'+FLIST.map(f=>`<option value="${f[0]}">${f[1]}${f[2]==='defunct'?' †':''}</option>`).join('');
+  $('#q').oninput=deb(e=>{st.q=e.target.value.toLowerCase();st.page=1;render();},180);
+  $('#ftype').onchange=e=>{st.type=e.target.value;st.page=1;render();};
+  $('#fseason').onchange=e=>{st.season=e.target.value;st.page=1;render();};
+  $('#ffr').onchange=e=>{st.fr=e.target.value;st.page=1;render();};
+  $('#reset').onclick=()=>{st.q=st.type=st.season=st.fr='';st.page=1;
+    $('#q').value='';$('#ftype').value='';$('#fseason').value='';$('#ffr').value='';render();};
+  $('#first').onclick=()=>{st.page=1;render();};
+  $('#prev').onclick=()=>{st.page=Math.max(1,st.page-1);render();};
+  $('#next').onclick=()=>{st.page=st.page+1;render();};
+  $('#last').onclick=()=>{st.page=1e9;render();};
+  $('#page').onchange=e=>{st.page=Math.max(1,parseInt(e.target.value)||1);render();};
+}
+const deb=(fn,ms)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};};
+
+function filtered(){
+  return DATA.filter(r=>{
+    if(st.type && r.type!==st.type) return false;
+    if(st.season && r.season!==st.season) return false;
+    if(st.fr && frOf(r.from_team_id)!==st.fr && frOf(r.to_team_id)!==st.fr) return false;
+    if(st.q){
+      const hay=(r.player_name+' '+r.from_team_name+' '+r.to_team_name+' '+(r.raw_text||'')).toLowerCase();
+      if(!hay.includes(st.q)) return false;
+    }
+    return true;
+  });
+}
+function sortRows(rows){
+  const k=st.sortKey, dir=st.sortDir==='asc'?1:-1;
+  return rows.sort((a,b)=>{
+    let x=(a[k]||''),y=(b[k]||'');
+    if(x===y) return 0;
+    if(x==='') return 1; if(y==='') return -1;      // blanks last
+    return x>y?dir:-dir;
+  });
+}
+function tally(rows){
+  const c={}; rows.forEach(r=>c[r.type]=(c[r.type]||0)+1);
+  const order=Object.entries(c).sort((a,b)=>b[1]-a[1]);
+  $('#tally').innerHTML=order.map(([t,n])=>
+    `<span class="chip ${st.type===t?'on':''}" data-t="${t}"><b>${n.toLocaleString()}</b> ${t}</span>`).join('');
+  $('#tally').querySelectorAll('.chip').forEach(ch=>ch.onclick=()=>{
+    st.type = st.type===ch.dataset.t?'':ch.dataset.t; $('#ftype').value=st.type; st.page=1; render();
+  });
+}
+function render(){
+  const rows=sortRows(filtered());
+  tally(rows);
+  const pages=Math.max(1,Math.ceil(rows.length/st.size));
+  st.page=Math.min(st.page,pages);
+  const start=(st.page-1)*st.size, slice=rows.slice(start,start+st.size);
+  COLS.forEach(c=>{const ar=$(`[data-ar="${c.k}"]`); if(ar) ar.textContent = st.sortKey===c.k?(st.sortDir==='asc'?'▲':'▼'):'';});
+  $('#body').innerHTML=slice.map(r=>rowHTML(r)).join('');
+  $('#body').querySelectorAll('tr.row').forEach(tr=>tr.onclick=()=>{
+    const id=tr.dataset.id; st.expanded.has(id)?st.expanded.delete(id):st.expanded.add(id); render();
+  });
+  $('#count').textContent = rows.length?`${(start+1).toLocaleString()}–${Math.min(start+st.size,rows.length).toLocaleString()} of ${rows.length.toLocaleString()}`:'no matches';
+  $('#pages').textContent=pages; $('#page').value=st.page;
+  $('#first').disabled=$('#prev').disabled=st.page<=1;
+  $('#next').disabled=$('#last').disabled=st.page>=pages;
+}
+function rowHTML(r){
+  const id=r.transaction_id, open=st.expanded.has(id);
+  const pill=`<span class="type-pill t-${esc(r.type)}">${esc(r.type)}</span>`;
+  const flag=(hasAssets&&ASSETS[id])?`<span class="flag">+${ASSETS[id].length}</span>`:'';
+  let h=`<tr class="row" data-id="${esc(id)}">
+    <td class="date">${esc(r.date)||'—'}</td><td class="season">${esc(r.season)}</td>
+    <td class="type">${pill}</td><td class="player">${esc(r.player_name)||'<span style=color:#aaa>—</span>'}</td>
+    <td class="team">${esc(r.from_team_name)||'·'}</td><td class="team">${esc(r.to_team_name)||'·'}${flag}</td>
+    <td class="arrowcol">${open?'▾':'▸'}</td></tr>`;
+  if(open) h+=`<tr class="detail"><td colspan="7"><div class="detail-body">${detailHTML(r)}</div></td></tr>`;
+  return h;
+}
+function detailHTML(r){
+  let h=`<div class="raw">${esc(r.raw_text)||'(no description)'}</div>`;
+  const a=ASSETS[r.transaction_id];
+  if(a&&a.length){
+    h+=`<div class="assets"><h4>Assets in this trade (${a.length})</h4>`+
+      a.map(x=>{
+        const lbl=x.player_name||x.notes||x.asset_type;
+        const mv=`${x.from_team_name||x.from_franchise_id||'?'} <b>→</b> ${x.to_team_name||x.to_franchise_id||'?'}`;
+        return `<div class="asset"><span class="k">${esc(x.asset_type)}</span><span class="mv">${esc(lbl)} &nbsp;·&nbsp; ${mv}</span></div>`;
+      }).join('')+`</div>`;
+  }
+  return h;
+}
+
+// file + drag/drop wiring
+$('#file').addEventListener('change',e=>parseFiles(e.target.files));
+const dz=$('#empty');
+['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over');}));
+['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over');}));
+dz.addEventListener('drop',e=>parseFiles(e.dataTransfer.files));
+tryAutoload();
+</script>
+</body>
+</html>
