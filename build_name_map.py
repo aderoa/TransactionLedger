@@ -74,6 +74,13 @@ def main():
         norm2name.setdefault(norm(rg), nm)
     overrides = {rg: nm for rg, nm in rg2name.items() if rg != nm}
 
+    # the NAME column is itself a roster of canonical names; a RealGM name appearing here verbatim
+    # is the same person even when its RG CODE cell is blank (e.g. Joan Beringer).
+    name_set = set()
+    for r in drows[1:]:
+        if len(r) > nm_i and r[nm_i].strip():
+            name_set.add(r[nm_i].strip())
+
     name2id, players = {}, []
     if a.players:
         prows = load_rows(a.players)
@@ -100,11 +107,13 @@ def main():
             len(collisions), ", ".join(list(collisions)[:5]), " ..." if len(collisions) > 5 else ""))
 
     if a.players:
-        exact = probable = none = 0
+        exact = via_name = probable = none = 0
         rows_out = []
         for pid, pname in players:
             if pname in rg2name:
                 exact += 1
+            elif pname in name_set:
+                via_name += 1                    # same name in the NAME column = same person
             else:
                 hit = norm2name.get(norm(pname))
                 if hit:
@@ -118,8 +127,10 @@ def main():
             w.writerow(["realgm_player_id", "realgm_name", "suggested_name", "match"])
             w.writerows(rows_out)
         print("RealGM database: %d players" % len(players))
-        print("  exact dictionary hit       : %5d" % exact)
-        print("  no exact entry             : %5d  -> name_unmatched.csv" % (probable + none))
+        print("  exact RG CODE hit          : %5d" % exact)
+        print("  exact NAME-column hit       : %5d  (same name = same person)" % via_name)
+        print("  connected total            : %5d" % (exact + via_name))
+        print("  still unmatched            : %5d  -> name_unmatched.csv" % (probable + none))
         print("      of which likely (folded): %5d  (match=normalized, has a suggestion)" % probable)
         print("      of which truly missing  : %5d  (match=none, add to dictionary)" % none)
 
