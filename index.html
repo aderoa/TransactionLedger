@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Transaction Ledger — All-Time NBA Moves</title>
+<title>Transaction Ledger — Admin / Editor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -104,17 +104,80 @@ tr.detail td{background:var(--card);border-bottom:1px solid var(--line)}
 :focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 @media (max-width:640px){header .sub{width:100%;margin-left:0}.wrap{padding:10px 12px 80px}.controls{padding:10px 12px}}
 .acc{color:var(--amber);font-size:11px;margin-left:5px;cursor:help;vertical-align:middle;letter-spacing:-1px}
+.accyr{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:1px 6px;margin-left:4px;vertical-align:middle}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ===================== ADMIN / EDITOR LAYER ===================== */
+header .adminflag{font-family:'JetBrains Mono',monospace;font-size:10px;color:#181A1B;background:var(--amber);border-radius:4px;padding:2px 7px;letter-spacing:.08em;font-weight:700;text-transform:uppercase}
+.topstick{position:sticky;top:0;z-index:6}
+.controls{position:static}
+.adminbar{background:var(--bar);color:var(--bar-ink);display:flex;gap:8px;align-items:center;padding:9px 20px;flex-wrap:wrap}
+.adminbar .ab-title{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:var(--amber);text-transform:uppercase}
+.adminbar .ab-build{font-family:'JetBrains Mono',monospace;font-size:10px;color:#7d7872;margin-right:4px}
+.adminbar .spacer{margin-left:auto}
+.btn{border-radius:7px;padding:7px 12px;cursor:pointer;border:1px solid transparent;font-weight:500;background:transparent}
+.btn.primary{background:var(--amber);color:#181A1B;border-color:var(--amber)}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.line{color:var(--muted);border-color:var(--line)}
+.btn.line:hover{border-color:var(--amber);color:var(--ink)}
+.adminbar .btn.line{color:var(--bar-ink);border-color:#3a3b3d}
+.adminbar .btn.line:hover{color:#fff;border-color:var(--amber)}
+.btn.sm{padding:4px 9px;font-size:12px}
+.btn.danger{color:#b0492f;border-color:#e0c3ba}
+.btn.danger:hover{border-color:#b0492f;background:#f7ece9}
+.btn.pulse{animation:pulse 1.7s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(224,144,43,.55)}50%{box-shadow:0 0 0 6px rgba(224,144,43,0)}}
+.dirty{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#181A1B;background:var(--amber-soft);border:1px solid var(--amber);border-radius:20px;padding:3px 10px;letter-spacing:.03em}
+
+/* modals */
+.modal{position:fixed;inset:0;background:rgba(20,20,22,.55);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;z-index:20;overflow:auto}
+.modal.hidden{display:none}
+.sheet{background:var(--card);border:1px solid var(--line);border-radius:14px;max-width:560px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.28)}
+.sh-head{display:flex;align-items:center;gap:10px;padding:15px 20px;border-bottom:1px solid var(--line)}
+.sh-head h3{margin:0;font-family:'JetBrains Mono',monospace;font-size:14px;letter-spacing:.04em}
+.sh-body{padding:16px 20px;display:grid;gap:12px}
+.sh-foot{padding:13px 20px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center}
+.sh-foot .spacer{margin-left:auto}
+.frow{display:grid;gap:4px}
+.frow label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:600;padding-left:2px}
+.frow input,.frow textarea{background:var(--paper);border:1px solid var(--line);border-radius:7px;padding:8px 11px;width:100%;font-family:inherit;font-size:14px}
+.frow textarea{min-height:64px;resize:vertical;line-height:1.4}
+.frow input.mono{font-family:'JetBrains Mono',monospace;font-size:12.5px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fgrid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.hint{font-size:11px;color:var(--faint);font-weight:400}
+.manage-list{max-height:50vh;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.mrow{display:grid;grid-template-columns:1fr auto;column-gap:12px;row-gap:3px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:8px 11px;background:var(--paper)}
+.mrow .mmeta{display:flex;gap:8px;align-items:center}
+.mrow .mname{font-weight:500}
+.mrow .mname .mteam{color:var(--muted);font-weight:400;font-size:12.5px;margin-left:6px}
+.mrow .macts{grid-row:1/3;grid-column:2;display:flex;gap:6px;align-self:center}
+.mrow .mdate{color:var(--muted);font-size:12px}
+#toast{position:fixed;left:50%;bottom:74px;transform:translateX(-50%) translateY(10px);background:var(--bar);color:var(--bar-ink);padding:9px 16px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:40;border:1px solid var(--amber);max-width:90vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.muted{color:var(--muted)}
+@media (max-width:640px){.fgrid,.fgrid3{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <header>
   <h1>Transaction&nbsp;Ledger</h1>
+  <span class="adminflag">Admin</span>
   <span class="tick" id="tick">— loading —</span>
   <span class="sub">All-time NBA roster moves · 1946–present · RealGM</span>
 </header>
 
 <div id="app" class="hidden">
+  <div class="topstick">
+  <div class="adminbar">
+    <span class="ab-title">Editor</span><span class="ab-build mono" id="ab-build"></span>
+    <button class="btn primary" id="btn-add">+ Add entry</button>
+    <button class="btn line" id="btn-manage">Manage log (<span id="admin-count">0</span>)</button>
+    <span class="spacer"></span>
+    <span class="dirty hidden" id="admin-dirty">unsaved — export &amp; commit</span>
+    <button class="btn line" id="btn-download">Download</button>
+    <button class="btn primary" id="btn-export">⧉ Copy CSV</button>
+  </div>
   <div class="controls">
     <div class="field grow">
       <label for="q">Search player or team</label>
@@ -129,6 +192,7 @@ tr.detail td{background:var(--card);border-bottom:1px solid var(--line)}
     <div class="field fxd"><label>Trades</label><label class="tog"><input type="checkbox" id="untangle" checked> untangle</label></div>
     <div class="field fxd"><label>&nbsp;</label><button class="ghost" id="reset">Reset</button></div>
   </div>
+  </div><!-- /topstick -->
   <div class="tally" id="tally"></div>
   <div class="wrap">
     <table>
@@ -152,6 +216,57 @@ tr.detail td{background:var(--card);border-bottom:1px solid var(--line)}
   <label>Choose files<input id="file" type="file" accept=".csv" multiple class="hidden"></label>
   <div class="opt">Hosting this on GitHub Pages? Put the CSVs in the same folder and it loads them automatically.</div>
 </div>
+
+<!-- ===== ADMIN: add/edit entry modal ===== -->
+<div id="modal-add" class="modal hidden">
+  <div class="sheet">
+    <div class="sh-head"><h3 id="af-title">Add entry</h3><span class="hint" style="margin-left:auto">manual log</span></div>
+    <div class="sh-body">
+      <div class="fgrid3">
+        <div class="frow"><label>Date</label><input id="af-date" type="date"></div>
+        <div class="frow"><label>Season</label><input id="af-season" placeholder="2025-26"></div>
+        <div class="frow"><label>Type</label><input id="af-type" list="dl-types" placeholder="sign" autocomplete="off"></div>
+      </div>
+      <div class="frow"><label>Player</label><input id="af-player" placeholder="e.g. Mark Williams" autocomplete="off"></div>
+      <div class="fgrid">
+        <div class="frow"><label>From team <span class="hint">(departure)</span></label><input id="af-from" list="dl-teams" autocomplete="off"></div>
+        <div class="frow"><label>To team <span class="hint">(arrival)</span></label><input id="af-to" list="dl-teams" autocomplete="off"></div>
+      </div>
+      <div class="frow"><label>Description (raw text)</label><textarea id="af-raw" placeholder="The Suns tendered a qualifying offer of $9,615,393 to Mark Williams…"></textarea></div>
+      <div class="fgrid">
+        <div class="frow"><label>Source URL</label><input id="af-src" value="manual"></div>
+        <div class="frow"><label>Player ID <span class="hint">(optional)</span></label><input id="af-pid" placeholder="RealGM id — leave blank"></div>
+      </div>
+      <div class="frow"><label>Transaction ID <span class="hint">(auto — LOG-)</span></label><input id="af-id" class="mono"></div>
+    </div>
+    <div class="sh-foot">
+      <button class="btn danger sm hidden" id="af-del">Delete</button>
+      <span class="spacer"></span>
+      <button class="btn line" id="af-cancel">Cancel</button>
+      <button class="btn primary" id="af-save">Save entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADMIN: manage log modal ===== -->
+<div id="modal-manage" class="modal hidden">
+  <div class="sheet">
+    <div class="sh-head"><h3>Manual log · <span id="manage-count">0</span></h3>
+      <button class="btn line sm" id="mg-close" style="margin-left:auto">Close</button></div>
+    <div class="sh-body"><div class="manage-list" id="manage-list"></div></div>
+    <div class="sh-foot">
+      <button class="btn line sm" id="mg-reset" title="Discard local edits and reload manual_transactions.csv from the repo">Reset to committed</button>
+      <button class="btn line sm" id="mg-committed" title="Clear the unsaved flag after you've pushed to GitHub">Mark committed</button>
+      <span class="spacer"></span>
+      <button class="btn line" id="mg-download">Download</button>
+      <button class="btn primary" id="mg-copy">⧉ Copy CSV</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<datalist id="dl-types"></datalist>
+<datalist id="dl-teams"></datalist>
 
 <script>
 const FMAP = {"1":["ATL","Atlanta Hawks"],"45":["ATL","Atlanta Hawks"],"46":["ATL","Atlanta Hawks"],"49":["ATL","Atlanta Hawks"],"2":["BOS","Boston Celtics"],"38":["BKN","Brooklyn Nets"],"18":["BKN","Brooklyn Nets"],"42":["BKN","Brooklyn Nets"],"3":["CHA","Charlotte Hornets"],"4":["CHI","Chicago Bulls"],"5":["CLE","Cleveland Cavaliers"],"6":["DAL","Dallas Mavericks"],"7":["DEN","Denver Nuggets"],"8":["DET","Detroit Pistons"],"53":["DET","Detroit Pistons"],"9":["GSW","Golden State Warriors"],"44":["GSW","Golden State Warriors"],"10":["HOU","Houston Rockets"],"40":["HOU","Houston Rockets"],"11":["IND","Indiana Pacers"],"12":["LAC","Los Angeles Clippers"],"35":["LAC","Los Angeles Clippers"],"36":["LAC","Los Angeles Clippers"],"13":["LAL","Los Angeles Lakers"],"47":["LAL","Los Angeles Lakers"],"14":["MEM","Memphis Grizzlies"],"32":["MEM","Memphis Grizzlies"],"15":["MIA","Miami Heat"],"16":["MIL","Milwaukee Bucks"],"17":["MIN","Minnesota Timberwolves"],"19":["NOP","New Orleans Pelicans"],"31":["NOP","New Orleans Pelicans"],"20":["NYK","New York Knicks"],"33":["OKC","Oklahoma City Thunder"],"27":["OKC","Oklahoma City Thunder"],"21":["ORL","Orlando Magic"],"22":["PHI","Philadelphia 76ers"],"54":["PHI","Philadelphia 76ers"],"23":["PHX","Phoenix Suns"],"24":["POR","Portland Trail Blazers"],"25":["SAC","Sacramento Kings"],"34":["SAC","Sacramento Kings"],"41":["SAC","Sacramento Kings"],"55":["SAC","Sacramento Kings"],"26":["SAS","San Antonio Spurs"],"28":["TOR","Toronto Raptors"],"29":["UTA","Utah Jazz"],"39":["UTA","Utah Jazz"],"30":["WAS","Washington Wizards"],"48":["WAS","Washington Wizards"],"51":["CHI_STAGS","Chicago Stags"],"52":["BAL_BULLETS_BAA","Baltimore Bullets (1947-54)"],"56":["WAS_CAPITOLS","Washington Capitols"],"57":["WATERLOO","Waterloo Hawks"],"58":["TOR_HUSKIES","Toronto Huskies"],"59":["SHEBOYGAN","Sheboygan Red Skins"],"60":["PROVIDENCE","Providence Steamrollers"],"61":["PIT_IRONMEN","Pittsburgh Ironmen"],"62":["IND_JETS","Indianapolis Jets"],"63":["DET_FALCONS","Detroit Falcons"],"64":["DEN_NUGGETS_1950","Denver Nuggets (1949-50)"],"65":["CLE_REBELS","Cleveland Rebels"],"66":["ANDERSON","Anderson Packers"],"67":["STL_BOMBERS","St. Louis Bombers"],"68":["IND_OLYMPIANS","Indianapolis Olympians"]};       // team_id -> [abbrev, current_name]
@@ -188,12 +303,10 @@ function buildRows(){
 
 function parseFiles(files){
   for(const f of files){
-    const isAwards=/award/i.test(f.name);
-    const isName=!isAwards&&/name[_-]?map/i.test(f.name), isLog=!isAwards&&!isName&&/manual|tx[_-]?log|transaction[_-]?log/i.test(f.name),
-          isAssets=!isAwards&&!isName&&!isLog&&/asset/i.test(f.name);
+    const isName=/name[_-]?map/i.test(f.name), isLog=!isName&&/manual|tx[_-]?log|transaction[_-]?log/i.test(f.name),
+          isAssets=!isName&&!isLog&&/asset/i.test(f.name);
     Papa.parse(f,{header:true,skipEmptyLines:true,worker:false,complete:r=>{
-      if(isAwards){ loadAwards(r.data); }
-      else if(isName){ loadNameMap(r.data); }
+      if(isName){ loadNameMap(r.data); }
       else if(isLog){ loadLog(r.data); }
       else if(isAssets){ indexAssets(r.data); }
       else { DATA=r.data; applyNames(); boot(); }
@@ -201,12 +314,10 @@ function parseFiles(files){
   }
 }
 function loadLog(rows){ LOG=rows||[]; applyNames(); if(DATA.length){ buildRows(); render(); } }
-function loadAwards(rows){ AWARDS={}; for(const r of (rows||[])){ if(r.realgm_player_id) AWARDS[r.realgm_player_id]=r; } if(DATA.length){ $('#facc').disabled=!Object.keys(AWARDS).length; render(); } }
 const AWARDS_API='https://hoopsmatic.com/api/player-awards';
 async function loadAwardsLive(){
-  const apply=o=>{ AWARDS=o||{}; if($('#facc')) $('#facc').disabled=!Object.keys(AWARDS).length; if(DATA.length) render(); };
-  try{ const r=await fetch(AWARDS_API); if(r.ok){ const j=await r.json(); if(j&&j.players&&Object.keys(j.players).length){ apply(j.players); return; } } }catch(e){}
-  try{ const r=await fetch('player_awards.csv'); if(r.ok){ const m={}; for(const x of (Papa.parse(await r.text(),{header:true,skipEmptyLines:true}).data||[])) if(x.realgm_player_id) m[x.realgm_player_id]=x; apply(m); } }catch(e){}
+  // Awards come exclusively from the Google Sheet via the Worker endpoint.
+  try{ const r=await fetch(AWARDS_API); if(r.ok){ const j=await r.json(); if(j&&j.players){ AWARDS=j.players; if($('#facc')) $('#facc').disabled=!Object.keys(AWARDS).length; if(DATA.length) render(); } } }catch(e){}
 }
 function setNameMap(rows){
   MAP_BYID={}; MAP_BYNAME={};
@@ -231,7 +342,7 @@ function applyNames(){
     return null;
   };
   for(const r of DATA){ const n=sub(r); if(n) r.player_name=n; }
-  for(const r of LOG){ const n=sub(r); if(n) r.player_name=n; }
+  /* admin: manual-log rows keep the name exactly as entered (export fidelity) */
   for(const k in ASSETS){ for(const a of ASSETS[k]){ const n=sub(a); if(n) a.player_name=n; } }
 }
 function loadNameMap(rows){ setNameMap(rows); applyNames(); if(DATA.length){ buildRows(); render(); } }
@@ -249,7 +360,9 @@ function tryAutoload(){
     fetch('manual_transactions.csv').then(r=>r.ok?r.text():Promise.reject())
   ]).then(([tx,as,nm,lg])=>{
     if(nm.status==='fulfilled') setNameMap(Papa.parse(nm.value,{header:true,skipEmptyLines:true}).data);
-    if(lg.status==='fulfilled') LOG=Papa.parse(lg.value,{header:true,skipEmptyLines:true}).data||[];
+    if(lg.status==='fulfilled') COMMITTED_LOG = Papa.parse(lg.value,{header:true,skipEmptyLines:true}).data||[];
+    const _saved = lsLoad();                       // admin: restore in-progress working copy if present
+    LOG = _saved ? _saved : JSON.parse(JSON.stringify(COMMITTED_LOG));
     if(as.status==='fulfilled') indexAssets(Papa.parse(as.value,{header:true,skipEmptyLines:true}).data);
     if(tx.status==='fulfilled'){ DATA=Papa.parse(tx.value,{header:true,skipEmptyLines:true}).data; applyNames(); boot(); }
   });
@@ -260,6 +373,7 @@ function boot(){
   buildHead(); buildRows(); buildFilters();
   $('#tick').textContent = DATA.length.toLocaleString()+' transactions'+(hasAssets?' · assets linked':'')+(LOG.length?' · '+LOG.length+' logged':'');
   render();
+  refreshAdminUI();
   loadAwardsLive();
 }
 function buildHead(){
@@ -313,15 +427,16 @@ function frHit(r,fr){
   return frOf(r.from_team_id)===fr || frOf(r.to_team_id)===fr ||
          NAME2FID[(r.from_team_name||'').toLowerCase()]===fr || NAME2FID[(r.to_team_name||'').toLowerCase()]===fr;
 }
+function txEndYear(r){ const m=(r.season||'').match(/(\d{4})/); if(m) return parseInt(m[1],10)+1; const d=parseInt((r.date||'').slice(0,4),10); return d||9999; }
+function accYears(a,cat){ const s=a&&a[cat+'_yrs']; if(s) return String(s).split(',').map(x=>parseInt(x,10)).filter(Boolean); const y=a&&parseInt(a[cat+'_yr'],10); return y?[y]:[]; }
+function accAsOf(a,cat,txY){ let best=null; for(const y of accYears(a,cat)) if(y<=txY&&(best===null||y>best)) best=y; return best; }
 function filtered(){
   return ROWS.filter(r=>{
     if(st.type && r.type!==st.type) return false;
     if(st.award){
       const a=AWARDS[r.player_id]; if(!a) return false;
-      if(st.award==='top75'){ if(+a.top75!==1) return false; }   // all-time honor, no as-of
-      else { const y=parseInt(a[st.award+'_yr'],10);
-             const txY=parseInt((r.date||'').slice(0,4),10)||(parseInt((r.season||'').slice(0,4),10)+1)||9999;
-             if(!y || y>txY) return false; }                     // had earned it by the move's year
+      if(st.award==='top75'){ if(+a.top75!==1) return false; }
+      else if(accAsOf(a,st.award,txEndYear(r))===null) return false;
     }
     if(st.season && r.season!==st.season) return false;
     if(st.fr && !frHit(r,st.fr)) return false;
@@ -381,7 +496,8 @@ function rowHTML(r){
   if(r._u && !isPlayerAsset) player=`<span class="asset-note">${esc(r.player_name)}</span>`;
   else player=(esc(r.player_name)||'<span style=color:#aaa>—</span>')+(r.asset_type==='draft_rights'?' <span class="rights">draft rights</span>':'');
   const aw=r.player_id?AWARDS[r.player_id]:null;
-  const accMark=aw?` <span class="acc" title="${esc(aw.awards_summary)}">\u2605</span>`:'';
+  let accMark=aw?` <span class="acc" title="${esc(aw.awards_summary)}">\u2605</span>`:'';
+  if(aw && st.award && st.award!=='top75'){ const yy=accAsOf(aw,st.award,txEndYear(r)); if(yy!==null) accMark+=` <span class="accyr" title="most recent in ${yy}">${txEndYear(r)-yy}y</span>`; }
   const flag=(!r._u && hasAssets && ASSETS[r.transaction_id])?`<span class="flag">+${ASSETS[r.transaction_id].length}</span>`:'';
   let h=`<tr class="row" data-id="${esc(r.uid)}">
     <td class="date">${esc(r.date)||'—'}</td><td class="season">${esc(r.season)}</td>
@@ -404,6 +520,170 @@ function detailHTML(r){
   }
   return h;
 }
+
+/* ===================== ADMIN / EDITOR LAYER ===================== */
+const ADMIN_BUILD = 'ledger-admin v1.1';
+const MANUAL_COLS = ['transaction_id','date','season','type','multiyear','player_id','player_name','from_team_id','from_team_name','to_team_id','to_team_name','raw_text','source_url'];
+const LS_KEY = 'txledger.adminlog.v1';
+const TYPE_OPTS = ['sign','re_sign','free_agent','waive','qualifying_offer','option_exercise','option_decline','extension','trade_complex','ten_day_sign','ten_day_end','two_way_sign','two_way_end','gleague_assign','gleague_recall','draft','claim','retire','release'];
+let COMMITTED_LOG = [];     // last-known committed manual_transactions.csv
+let editingId = null;       // transaction_id under edit, or null when adding
+
+function lsSave(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(LOG)); }catch(e){} }
+function lsLoad(){ try{ const s=localStorage.getItem(LS_KEY); return s?JSON.parse(s):null; }catch(e){ return null; } }
+function normLog(arr){ return (arr||[]).map(r=>{const o={};MANUAL_COLS.forEach(k=>o[k]=((r[k]??'')+''));return o;}); }
+function isDirty(){ return JSON.stringify(normLog(LOG))!==JSON.stringify(normLog(COMMITTED_LOG)); }
+
+function computeSeason(dateStr){
+  const d=dateStr?new Date(dateStr+'T00:00:00'):new Date();
+  const y=d.getFullYear(), m=d.getMonth()+1;            // NBA league year flips ~July
+  const start=m>=7?y:y-1, end=(start+1)%100;
+  return start+'-'+String(end).padStart(2,'0');
+}
+function nextLogId(dateStr){
+  const ymd=(dateStr||new Date().toISOString().slice(0,10)).replace(/-/g,'');
+  const pre='LOG-'+ymd+'-'; let max=0;
+  LOG.forEach(r=>{ const id=(r.transaction_id||''); if(id.indexOf(pre)===0){ const n=parseInt(id.slice(pre.length),10); if(n>max) max=n; } });
+  return pre+String(max+1).padStart(3,'0');
+}
+let _ft; function flash(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(_ft); _ft=setTimeout(()=>t.classList.remove('show'),2800); }
+
+function refreshAdminUI(){
+  $('#tick').textContent = DATA.length.toLocaleString()+' transactions'+(hasAssets?' · assets linked':'')+(LOG.length?' · '+LOG.length+' logged':'');
+  $('#admin-count').textContent = LOG.length;
+  if($('#manage-count')) $('#manage-count').textContent = LOG.length;
+  const d=isDirty();
+  $('#admin-dirty').classList.toggle('hidden', !d);
+  $('#btn-export').classList.toggle('pulse', d);
+}
+function afterChange(){ lsSave(); buildRows(); populateTypeFilter(); render(); refreshAdminUI(); }
+
+/* --- add / edit form --- */
+function openForm(row){
+  editingId = row ? row.transaction_id : null;
+  const f=row||{};
+  $('#af-date').value   = f.date || new Date().toISOString().slice(0,10);
+  $('#af-season').value = f.season || computeSeason($('#af-date').value);
+  $('#af-type').value   = f.type || 'sign';
+  $('#af-player').value = f.player_name || '';
+  $('#af-from').value   = f.from_team_name || '';
+  $('#af-to').value     = f.to_team_name || '';
+  $('#af-raw').value    = f.raw_text || '';
+  $('#af-src').value    = f.source_url || 'manual';
+  $('#af-pid').value    = f.player_id || '';
+  $('#af-id').value     = f.transaction_id || nextLogId($('#af-date').value);
+  $('#af-title').textContent = row ? 'Edit entry' : 'Add entry';
+  $('#af-del').classList.toggle('hidden', !row);
+  $('#modal-add').classList.remove('hidden');
+  setTimeout(()=>$('#af-player').focus(),30);
+}
+function closeForm(){ $('#modal-add').classList.add('hidden'); editingId=null; }
+function saveForm(){
+  const player=$('#af-player').value.trim();
+  if(!player){ flash('Player name is required'); $('#af-player').focus(); return; }
+  const rec={
+    transaction_id: $('#af-id').value.trim() || nextLogId($('#af-date').value),
+    date: $('#af-date').value,
+    season: $('#af-season').value.trim() || computeSeason($('#af-date').value),
+    type: $('#af-type').value.trim() || 'sign',
+    multiyear: '',
+    player_id: $('#af-pid').value.trim(),
+    player_name: player,
+    from_team_id: '', from_team_name: $('#af-from').value.trim(),
+    to_team_id: '',   to_team_name: $('#af-to').value.trim(),
+    raw_text: $('#af-raw').value.trim(),
+    source_url: $('#af-src').value.trim() || 'manual'
+  };
+  if(editingId){
+    const i=LOG.findIndex(r=>r.transaction_id===editingId);
+    if(i>=0) LOG[i]=rec; else LOG.push(rec);
+  } else {
+    if(LOG.some(r=>r.transaction_id===rec.transaction_id)){ flash('That transaction_id already exists'); return; }
+    LOG.push(rec);
+  }
+  const wasEdit=!!editingId;
+  afterChange(); closeForm();
+  flash(wasEdit?'Entry updated':'Entry added');
+}
+function deleteEntry(id){
+  if(!confirm('Delete this entry from the manual log?')) return;
+  const i=LOG.findIndex(r=>r.transaction_id===id); if(i>=0) LOG.splice(i,1);
+  afterChange(); if(!$('#modal-manage').classList.contains('hidden')) renderManage();
+  flash('Entry deleted');
+}
+
+/* --- manage modal --- */
+function openManage(){ renderManage(); $('#modal-manage').classList.remove('hidden'); }
+function closeManage(){ $('#modal-manage').classList.add('hidden'); }
+function renderManage(){
+  const rows=[...LOG].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  $('#manage-list').innerHTML = rows.length ? rows.map(r=>`
+    <div class="mrow">
+      <div class="mmeta"><span class="mono mdate">${esc(r.date)||'—'}</span> <span class="type-pill t-${esc(r.type)}">${esc(r.type)}</span></div>
+      <div class="mname">${esc(r.player_name)||'—'}<span class="mteam">${esc(r.from_team_name)||'·'} → ${esc(r.to_team_name)||'·'}</span></div>
+      <div class="macts"><button class="btn line sm" data-edit="${esc(r.transaction_id)}">Edit</button><button class="btn danger sm" data-del="${esc(r.transaction_id)}">Delete</button></div>
+    </div>`).join('') : '<p class="muted" style="text-align:center;padding:24px 0">No manual entries yet. Hit “+ Add entry”.</p>';
+  $('#manage-list').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{ const r=LOG.find(x=>x.transaction_id===b.dataset.edit); closeManage(); openForm(r); });
+  $('#manage-list').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>deleteEntry(b.dataset.del));
+  if($('#manage-count')) $('#manage-count').textContent = LOG.length;
+}
+
+/* --- export / sync --- */
+function buildManualCSV(){
+  const data=LOG.map(r=>{ const o={}; MANUAL_COLS.forEach(k=>o[k]=(r[k]??'')); return o; });
+  return Papa.unparse({fields:MANUAL_COLS, data}, {newline:'\n'});
+}
+function copyCSV(){
+  const csv=buildManualCSV();
+  const ok=()=>flash('CSV copied — paste into manual_transactions.csv & commit');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(csv).then(ok).catch(()=>fallbackCopy(csv));
+  } else fallbackCopy(csv);
+}
+function fallbackCopy(csv){
+  const ta=document.createElement('textarea'); ta.value=csv; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); flash('CSV copied'); }catch(e){ flash('Copy failed — use Download'); }
+  ta.remove();
+}
+function downloadCSV(){
+  const blob=new Blob([buildManualCSV()],{type:'text/csv;charset=utf-8'});
+  const u=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=u; a.download='manual_transactions.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(u);
+  flash('Downloaded manual_transactions.csv');
+}
+function markCommitted(){ COMMITTED_LOG=JSON.parse(JSON.stringify(LOG)); refreshAdminUI(); flash('Marked as committed'); }
+function resetToCommitted(){
+  if(isDirty() && !confirm('Discard local edits and reload the committed manual_transactions.csv?')) return;
+  fetch('manual_transactions.csv',{cache:'no-store'}).then(r=>r.ok?r.text():Promise.reject())
+    .then(t=>{ const rows=Papa.parse(t,{header:true,skipEmptyLines:true}).data||[];
+      LOG=rows; COMMITTED_LOG=JSON.parse(JSON.stringify(rows)); lsSave();
+      buildRows(); populateTypeFilter(); render(); refreshAdminUI(); renderManage(); flash('Reloaded committed file'); })
+    .catch(()=>flash('Could not fetch committed file (offline / local preview)'));
+}
+
+/* --- wiring --- */
+$('#ab-build').textContent = ADMIN_BUILD;
+$('#dl-types').innerHTML = TYPE_OPTS.map(t=>`<option value="${t}">`).join('');
+$('#dl-teams').innerHTML = FLIST.map(f=>`<option value="${f[1]}">`).join('');
+$('#btn-add').onclick=()=>openForm(null);
+$('#btn-manage').onclick=openManage;
+$('#btn-export').onclick=copyCSV;
+$('#btn-download').onclick=downloadCSV;
+$('#af-cancel').onclick=closeForm;
+$('#af-save').onclick=saveForm;
+$('#af-del').onclick=()=>{ if(editingId){ const id=editingId; closeForm(); deleteEntry(id); } };
+$('#af-date').onchange=()=>{ if(!editingId){ $('#af-id').value=nextLogId($('#af-date').value); $('#af-season').value=$('#af-season').value||computeSeason($('#af-date').value); } };
+$('#mg-close').onclick=closeManage;
+$('#mg-reset').onclick=resetToCommitted;
+$('#mg-committed').onclick=markCommitted;
+$('#mg-copy').onclick=copyCSV;
+$('#mg-download').onclick=downloadCSV;
+$('#modal-add').onclick=e=>{ if(e.target.id==='modal-add') closeForm(); };
+$('#modal-manage').onclick=e=>{ if(e.target.id==='modal-manage') closeManage(); };
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeForm(); closeManage(); } });
+window.addEventListener('beforeunload',e=>{ if(isDirty()){ e.preventDefault(); e.returnValue=''; } });
+console.log('%c📋 '+ADMIN_BUILD,'color:#E0902B;font-weight:bold');
 
 // file + drag/drop wiring
 $('#file').addEventListener('change',e=>parseFiles(e.target.files));
