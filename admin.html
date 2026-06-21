@@ -497,7 +497,7 @@ function rowHTML(r){
   else player=(esc(r.player_name)||'<span style=color:#aaa>—</span>')+(r.asset_type==='draft_rights'?' <span class="rights">draft rights</span>':'');
   const aw=r.player_id?AWARDS[r.player_id]:null;
   let accMark=aw?` <span class="acc" title="${esc(aw.awards_summary)}">\u2605</span>`:'';
-  if(aw && st.award && st.award!=='top75'){ const yy=accAsOf(aw,st.award,txEndYear(r)); if(yy!==null) accMark+=` <span class="accyr" title="most recent in ${yy}">${txEndYear(r)-yy}y</span>`; }
+  if(aw && st.award && st.award!=='top75' && aw[st.award+'_yrs']){ const yy=accAsOf(aw,st.award,txEndYear(r)); if(yy!==null) accMark+=` <span class="accyr" title="most recent in ${yy}">${txEndYear(r)-yy}y</span>`; }
   const flag=(!r._u && hasAssets && ASSETS[r.transaction_id])?`<span class="flag">+${ASSETS[r.transaction_id].length}</span>`:'';
   let h=`<tr class="row" data-id="${esc(r.uid)}">
     <td class="date">${esc(r.date)||'—'}</td><td class="season">${esc(r.season)}</td>
