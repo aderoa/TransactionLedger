@@ -103,6 +103,7 @@ tr.detail td{background:var(--card);border-bottom:1px solid var(--line)}
 .hidden{display:none!important}
 :focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 @media (max-width:640px){header .sub{width:100%;margin-left:0}.wrap{padding:10px 12px 80px}.controls{padding:10px 12px}}
+.acc{color:var(--amber);font-size:11px;margin-left:5px;cursor:help;vertical-align:middle;letter-spacing:-1px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -120,6 +121,7 @@ tr.detail td{background:var(--card);border-bottom:1px solid var(--line)}
       <input id="q" type="search" placeholder="e.g. LeBron James, Lakers, Pau Gasol…" autocomplete="off">
     </div>
     <div class="field fxd"><label for="ftype">Type</label><select id="ftype"></select></div>
+      <div class="field fxd"><label for="facc">Accolade</label><select id="facc"></select></div>
     <div class="field fxd"><label for="fseason">Season</label><select id="fseason"></select></div>
     <div class="field fxd"><label for="ffr">Franchise <span style="color:var(--amber)">(all eras)</span></label><select id="ffr"></select></div>
     <div class="field fxd"><label>Date <span style="color:var(--faint)">(mo / day / yr)</span></label>
@@ -159,9 +161,9 @@ const COLS = [
   {k:'type',label:'Type',cls:'type'},{k:'player_name',label:'Player',cls:'player'},
   {k:'from_team_name',label:'From',cls:'team'},{k:'to_team_name',label:'To',cls:'team'}
 ];
-let DATA=[], ASSETS={}, hasAssets=false, ROWS=[], LOG=[];
+let DATA=[], ASSETS={}, hasAssets=false, ROWS=[], LOG=[], AWARDS={};
 const NAME2FID={}; FLIST.forEach(f=>NAME2FID[f[1].toLowerCase()]=f[0]);
-let st={q:'',type:'',season:'',fr:'',month:'',day:'',year:'',sortKey:'date',sortDir:'desc',page:1,size:100,expanded:new Set(),untangle:true};
+let st={q:'',type:'',season:'',fr:'',month:'',day:'',year:'',sortKey:'date',sortDir:'desc',page:1,size:100,expanded:new Set(),untangle:true,award:''};
 let MAP_BYID={}, MAP_BYNAME={};
 
 const $=s=>document.querySelector(s);
@@ -176,7 +178,7 @@ function buildRows(){
         uid:r.transaction_id+'#'+i, transaction_id:r.transaction_id, date:r.date, season:r.season,
         type:'trade', asset_type:a.asset_type, player_name:a.player_name||a.notes||a.asset_type,
         from_team_name:a.from_team_name, to_team_name:a.to_team_name,
-        from_team_id:a.from_team_id, to_team_id:a.to_team_id, raw_text:r.raw_text, _u:true }));
+        from_team_id:a.from_team_id, to_team_id:a.to_team_id, player_id:a.player_id||'', raw_text:r.raw_text, _u:true }));
     } else {
       ROWS.push(Object.assign({uid:r.transaction_id}, r));
     }
@@ -186,10 +188,12 @@ function buildRows(){
 
 function parseFiles(files){
   for(const f of files){
-    const isName=/name[_-]?map/i.test(f.name), isLog=!isName&&/manual|tx[_-]?log|transaction[_-]?log/i.test(f.name),
-          isAssets=!isName&&!isLog&&/asset/i.test(f.name);
+    const isAwards=/award/i.test(f.name);
+    const isName=!isAwards&&/name[_-]?map/i.test(f.name), isLog=!isAwards&&!isName&&/manual|tx[_-]?log|transaction[_-]?log/i.test(f.name),
+          isAssets=!isAwards&&!isName&&!isLog&&/asset/i.test(f.name);
     Papa.parse(f,{header:true,skipEmptyLines:true,worker:false,complete:r=>{
-      if(isName){ loadNameMap(r.data); }
+      if(isAwards){ loadAwards(r.data); }
+      else if(isName){ loadNameMap(r.data); }
       else if(isLog){ loadLog(r.data); }
       else if(isAssets){ indexAssets(r.data); }
       else { DATA=r.data; applyNames(); boot(); }
@@ -197,6 +201,13 @@ function parseFiles(files){
   }
 }
 function loadLog(rows){ LOG=rows||[]; applyNames(); if(DATA.length){ buildRows(); render(); } }
+function loadAwards(rows){ AWARDS={}; for(const r of (rows||[])){ if(r.realgm_player_id) AWARDS[r.realgm_player_id]=r; } if(DATA.length){ $('#facc').disabled=!Object.keys(AWARDS).length; render(); } }
+const AWARDS_API='https://hoopsmatic.com/api/player-awards';
+async function loadAwardsLive(){
+  const apply=o=>{ AWARDS=o||{}; if($('#facc')) $('#facc').disabled=!Object.keys(AWARDS).length; if(DATA.length) render(); };
+  try{ const r=await fetch(AWARDS_API); if(r.ok){ const j=await r.json(); if(j&&j.players&&Object.keys(j.players).length){ apply(j.players); return; } } }catch(e){}
+  try{ const r=await fetch('player_awards.csv'); if(r.ok){ const m={}; for(const x of (Papa.parse(await r.text(),{header:true,skipEmptyLines:true}).data||[])) if(x.realgm_player_id) m[x.realgm_player_id]=x; apply(m); } }catch(e){}
+}
 function setNameMap(rows){
   MAP_BYID={}; MAP_BYNAME={};
   if(!rows.length) return;
@@ -249,6 +260,7 @@ function boot(){
   buildHead(); buildRows(); buildFilters();
   $('#tick').textContent = DATA.length.toLocaleString()+' transactions'+(hasAssets?' · assets linked':'')+(LOG.length?' · '+LOG.length+' logged':'');
   render();
+  loadAwardsLive();
 }
 function buildHead(){
   $('#head').innerHTML = COLS.map(c=>`<th data-k="${c.k}">${c.label}<span class="ar" data-ar="${c.k}"></span></th>`).join('')+'<th data-static></th>';
@@ -273,6 +285,10 @@ function buildFilters(){
   $('#fday').innerHTML='<option value="">Day</option>'+Array.from({length:31},(_,i)=>`<option value="${String(i+1).padStart(2,'0')}">${i+1}</option>`).join('');
   const years=[...new Set(DATA.map(r=>(r.date||'').slice(0,4)).filter(Boolean))].sort().reverse();
   $('#fyear').innerHTML='<option value="">Yr</option>'+years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  const ACC=[['','Any accolade'],['all_star','All-Star'],['mvp','MVP'],['all_nba','All-NBA'],['all_defensive','All-Defensive'],['dpoy','Defensive POY'],['roy','Rookie of the Year'],['smoy','Sixth Man'],['mip','Most Improved'],['champion','Champion'],['finals_mvp','Finals MVP'],['top75','Top-75 / Top-50']];
+  $('#facc').innerHTML=ACC.map(([v,l])=>`<option value="${v}"${st.award===v?' selected':''}>${l}</option>`).join('');
+  $('#facc').disabled=!Object.keys(AWARDS).length;
+  $('#facc').onchange=e=>{st.award=e.target.value;st.page=1;render();};
   $('#untangle').checked=st.untangle; $('#untangle').disabled=!hasAssets;
   $('#q').oninput=deb(e=>{st.q=e.target.value.toLowerCase();st.page=1;render();},180);
   $('#ftype').onchange=e=>{st.type=e.target.value;st.page=1;render();};
@@ -284,7 +300,7 @@ function buildFilters(){
   $('#untangle').onchange=e=>{st.untangle=e.target.checked;buildRows();populateTypeFilter();st.page=1;render();};
   $('#reset').onclick=()=>{st.q=st.type=st.season=st.fr=st.month=st.day=st.year='';st.page=1;
     $('#q').value='';$('#ftype').value='';$('#fseason').value='';$('#ffr').value='';
-    $('#fmonth').value='';$('#fday').value='';$('#fyear').value='';render();};
+    $('#fmonth').value='';$('#fday').value='';$('#fyear').value='';$('#facc').value='';st.award='';render();};
   $('#first').onclick=()=>{st.page=1;render();};
   $('#prev').onclick=()=>{st.page=Math.max(1,st.page-1);render();};
   $('#next').onclick=()=>{st.page=st.page+1;render();};
@@ -300,6 +316,13 @@ function frHit(r,fr){
 function filtered(){
   return ROWS.filter(r=>{
     if(st.type && r.type!==st.type) return false;
+    if(st.award){
+      const a=AWARDS[r.player_id]; if(!a) return false;
+      if(st.award==='top75'){ if(+a.top75!==1) return false; }   // all-time honor, no as-of
+      else { const y=parseInt(a[st.award+'_yr'],10);
+             const txY=parseInt((r.date||'').slice(0,4),10)||(parseInt((r.season||'').slice(0,4),10)+1)||9999;
+             if(!y || y>txY) return false; }                     // had earned it by the move's year
+    }
     if(st.season && r.season!==st.season) return false;
     if(st.fr && !frHit(r,st.fr)) return false;
     if(st.year||st.month||st.day){
@@ -357,10 +380,12 @@ function rowHTML(r){
   let player;
   if(r._u && !isPlayerAsset) player=`<span class="asset-note">${esc(r.player_name)}</span>`;
   else player=(esc(r.player_name)||'<span style=color:#aaa>—</span>')+(r.asset_type==='draft_rights'?' <span class="rights">draft rights</span>':'');
+  const aw=r.player_id?AWARDS[r.player_id]:null;
+  const accMark=aw?` <span class="acc" title="${esc(aw.awards_summary)}">\u2605</span>`:'';
   const flag=(!r._u && hasAssets && ASSETS[r.transaction_id])?`<span class="flag">+${ASSETS[r.transaction_id].length}</span>`:'';
   let h=`<tr class="row" data-id="${esc(r.uid)}">
     <td class="date">${esc(r.date)||'—'}</td><td class="season">${esc(r.season)}</td>
-    <td class="type">${pill}</td><td class="player">${player}</td>
+    <td class="type">${pill}</td><td class="player">${player}${accMark}</td>
     <td class="team">${esc(r.from_team_name)||'·'}</td><td class="team">${esc(r.to_team_name)||'·'}${flag}</td>
     <td class="arrowcol">${open?'▾':'▸'}</td></tr>`;
   if(open) h+=`<tr class="detail"><td colspan="7"><div class="detail-body">${detailHTML(r)}</div></td></tr>`;
